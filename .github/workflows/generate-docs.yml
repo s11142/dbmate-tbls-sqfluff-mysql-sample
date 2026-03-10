@@ -8,6 +8,9 @@ on:
     paths:
       - "db/migrations/**"
 
+permissions:
+  contents: write
+
 jobs:
   generate-docs:
     runs-on: ubuntu-latest
