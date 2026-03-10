@@ -38,8 +38,10 @@ jobs:
           curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
           chmod +x /usr/local/bin/dbmate
 
-      - name: Run migrations
-        run: dbmate up
+      - name: Wait for MySQL and run migrations
+        run: |
+          dbmate wait
+          dbmate up
 
       - name: Generate tbls docs
         run: |

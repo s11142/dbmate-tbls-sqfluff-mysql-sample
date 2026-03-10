@@ -37,7 +37,9 @@ jobs:
           chmod +x /usr/local/bin/dbmate
 
       - name: Run migrations up
-        run: dbmate up
+        run: |
+          dbmate wait
+          dbmate up
 
       - name: Rollback all migrations
         run: |
