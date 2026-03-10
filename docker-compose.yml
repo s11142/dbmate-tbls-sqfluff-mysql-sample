@@ -1,0 +1,32 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dbmate-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: app_db
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  dbmate:
+    image: ghcr.io/amacneil/dbmate:2
+    container_name: dbmate
+    environment:
+      DATABASE_URL: "mysql://app_user:app_pass@mysql:3306/app_db"
+    volumes:
+      - ./db:/db
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:

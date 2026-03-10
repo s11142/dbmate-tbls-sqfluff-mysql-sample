@@ -1,0 +1,50 @@
+name: Migration Test
+
+on:
+  pull_request:
+    paths:
+      - "db/migrations/**"
+
+jobs:
+  migration-roundtrip:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: app_db
+          MYSQL_USER: app_user
+          MYSQL_PASSWORD: app_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -prootpass"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: "mysql://app_user:app_pass@127.0.0.1:3306/app_db"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dbmate
+        run: |
+          curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+          chmod +x /usr/local/bin/dbmate
+
+      - name: Run migrations up
+        run: dbmate up
+
+      - name: Rollback all migrations
+        run: |
+          MIGRATION_COUNT=$(ls db/migrations/*.sql | wc -l)
+          for i in $(seq 1 "$MIGRATION_COUNT"); do
+            dbmate rollback
+          done
+
+      - name: Run migrations up again
+        run: dbmate up

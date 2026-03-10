@@ -1,0 +1,62 @@
+name: Generate Schema Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "db/migrations/**"
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: app_db
+          MYSQL_USER: app_user
+          MYSQL_PASSWORD: app_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -prootpass"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: "mysql://app_user:app_pass@127.0.0.1:3306/app_db"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dbmate
+        run: |
+          curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
+          chmod +x /usr/local/bin/dbmate
+
+      - name: Run migrations
+        run: dbmate up
+
+      - name: Generate tbls docs
+        run: |
+          docker run --rm \
+            --network host \
+            -v ${{ github.workspace }}/.tbls.yml:/work/.tbls.yml \
+            -v ${{ github.workspace }}/docs/schema:/work/docs/schema \
+            ghcr.io/k1low/tbls:latest doc --force
+
+      - name: Commit and push docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/schema/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs: update schema documentation"
+            git push
+          fi

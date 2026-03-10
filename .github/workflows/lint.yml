@@ -1,0 +1,40 @@
+name: SQL Lint
+
+on:
+  pull_request:
+    paths:
+      - "db/migrations/**"
+
+jobs:
+  sqlfluff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run SQLFluff lint
+        run: |
+          docker run --rm -v ${{ github.workspace }}/db/migrations:/sql \
+            sqlfluff/sqlfluff:3.3.0 lint /sql
+
+  dangerous-command-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for dangerous commands
+        run: |
+          DANGEROUS_PATTERNS="DROP TABLE|TRUNCATE|DROP DATABASE|DROP SCHEMA"
+          # migrate:down ブロック内の DROP は許可するため、migrate:up ブロックのみチェック
+          FOUND=0
+          for file in db/migrations/*.sql; do
+            # migrate:up セクションのみ抽出してチェック
+            UP_SECTION=$(sed -n '/-- migrate:up/,/-- migrate:down/p' "$file" | head -n -1)
+            if echo "$UP_SECTION" | grep -inE "$DANGEROUS_PATTERNS" > /dev/null 2>&1; then
+              echo "⚠️  Dangerous command found in UP migration: $file"
+              echo "$UP_SECTION" | grep -inE "$DANGEROUS_PATTERNS"
+              FOUND=1
+            fi
+          done
+          if [ "$FOUND" -eq 1 ]; then
+            echo "::warning::Dangerous SQL commands detected in UP migrations. Please review carefully."
+          fi
