@@ -43,13 +43,13 @@ jobs:
           dbmate wait
           dbmate up
 
-      - name: Generate tbls docs
+      - name: Install tbls
         run: |
-          docker run --rm \
-            --network host \
-            -v ${{ github.workspace }}/.tbls.yml:/work/.tbls.yml \
-            -v ${{ github.workspace }}/docs/schema:/work/docs/schema \
-            ghcr.io/k1low/tbls:latest doc --force
+          curl -fsSL -o /tmp/tbls.deb https://github.com/k1LoW/tbls/releases/latest/download/tbls_amd64.deb
+          sudo dpkg -i /tmp/tbls.deb
+
+      - name: Generate tbls docs
+        run: tbls doc --force
 
       - name: Commit and push docs
         run: |
