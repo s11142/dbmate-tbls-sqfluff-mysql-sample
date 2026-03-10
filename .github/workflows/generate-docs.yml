@@ -46,8 +46,10 @@ jobs:
 
       - name: Install tbls
         run: |
-          curl -fsSL -o /tmp/tbls.deb https://github.com/k1LoW/tbls/releases/latest/download/tbls_amd64.deb
-          sudo dpkg -i /tmp/tbls.deb
+          gh release download --repo k1LoW/tbls --pattern '*_amd64.deb' --dir /tmp
+          sudo dpkg -i /tmp/tbls_*_amd64.deb
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Generate tbls docs
         run: tbls doc --force
